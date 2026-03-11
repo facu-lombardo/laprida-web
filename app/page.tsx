@@ -19,7 +19,7 @@ export default function Compras() {
 
       <h1>Compras</h1>
 
-      <table border="1">
+      <table border={1}>
         <thead>
           <tr>
             <th>ID</th>
