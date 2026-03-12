@@ -27,16 +27,19 @@ export default async function Page() {
           </tr>
         </thead>
 
+        
         <tbody>
-          {compras.map((c:any) => (
-            <tr key={c.id}>
-              <td>{c.id}</td>
-              <td>{c.proveedor}</td>
-              <td>{c.monto}</td>
-              <td>{c.fecha}</td>
-            </tr>
-          ))}
+          {Array.isArray(compras) &&
+            compras.map((c:any) => (
+              <tr key={c.id}>
+                <td>{c.id}</td>
+                <td>{c.proveedor}</td>
+                <td>{c.monto}</td>
+                <td>{c.fecha}</td>
+              </tr>
+            ))}
         </tbody>
+        
 
       </table>
 
