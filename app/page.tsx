@@ -29,6 +29,7 @@ export default async function Page() {
 
         
         <tbody>
+          console.log(compras)
           {Array.isArray(compras) &&
             compras.map((c:any) => (
               <tr key={c.id}>
