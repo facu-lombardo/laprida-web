@@ -1,15 +1,12 @@
-async function getCompras() {
-
-  const res = await fetch("http://localhost:3000/api/compras", {
-    cache: "no-store"
-  });
-
-  return res.json();
-}
+import pool from "@/lib/db";
 
 export default async function Page() {
 
-  const compras = await getCompras();
+  const result = await pool.query(
+    "SELECT * FROM compras ORDER BY id"
+  );
+
+  const compras = result.rows;
 
   return (
     <div style={{ padding: 40 }}>
@@ -17,31 +14,15 @@ export default async function Page() {
       <h1>Compras</h1>
 
       <table border={1} cellPadding={10}>
-
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Proveedor</th>
-            <th>Monto</th>
-            <th>Fecha</th>
-          </tr>
-        </thead>
-
-        
         <tbody>
-          console.log(compras)
-          {Array.isArray(compras) &&
-            compras.map((c:any) => (
-              <tr key={c.id}>
-                <td>{c.id}</td>
-                <td>{c.proveedor}</td>
-                <td>{c.monto}</td>
-                <td>{c.fecha}</td>
-              </tr>
-            ))}
+          {compras.map((c:any) => (
+            <tr key={c.id}>
+              <td>{c.proveedor}</td>
+              <td>{c.monto}</td>
+              <td>{c.fecha.toISOString().slice(0,10)}</td>
+            </tr>
+          ))}
         </tbody>
-        
-
       </table>
 
     </div>
