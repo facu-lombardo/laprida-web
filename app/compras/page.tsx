@@ -1,95 +1,57 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"
 
-export default function ComprasDashboard() {
+export default function ComprasPage() {
 
-  const [data,setData] = useState<any[]>([])
-  const [busqueda,setBusqueda] = useState("")
-  const [desde,setDesde] = useState("")
-  const [hasta,setHasta] = useState("")
+ const [compras, setCompras] = useState([])
 
-  useEffect(()=>{
+ useEffect(() => {
 
-    fetch("/api/compras")
-    .then(res=>res.json())
-    .then(data=>setData(data))
+  fetch("/api/compras")
+   .then(res => res.json())
+   .then(data => setCompras(data))
 
-  },[])
+ }, [])
 
-  const datosFiltrados = data.filter((item:any)=>{
+ return (
 
-    const coincideProveedor =
-      item.nom_prov?.toLowerCase().includes(busqueda.toLowerCase())
+  <div style={{padding:20}}>
 
-    const partes = item.fecha.split("/")
-    const fecha = new Date(partes[2], partes[1]-1, partes[0])
+   <h1>Compras</h1>
 
-    const coincideFecha =
-      (!desde || fecha >= new Date(desde)) &&
-      (!hasta || fecha <= new Date(hasta))
+   <table border={1} cellPadding={5}>
 
-    return coincideProveedor && coincideFecha
-  })
+    <thead>
+     <tr>
+      <th>ID</th>
+      <th>Proveedor</th>
+      <th>Numero</th>
+      <th>Fecha</th>
+      <th>Costo</th>
+      <th>Publico</th>
+     </tr>
+    </thead>
 
-  return (
+    <tbody>
 
-    <div style={{padding:"30px", fontFamily:"Arial"}}>
+     {compras.map((c:any) => (
 
-      <h1>Dashboard de Compras</h1>
+      <tr key={c.id_compra}>
+       <td>{c.id_compra}</td>
+       <td>{c.nom_prov}</td>
+       <td>{c.numero}</td>
+       <td>{c.fecha}</td>
+       <td>{c.costo}</td>
+       <td>{c.publico}</td>
+      </tr>
 
-      <div style={{marginBottom:"20px"}}>
+     ))}
 
-        <input
-          placeholder="Buscar proveedor..."
-          value={busqueda}
-          onChange={(e)=>setBusqueda(e.target.value)}
-          style={{marginRight:"10px"}}
-        />
+    </tbody>
 
-        <label>Desde:</label>
-        <input
-          type="date"
-          onChange={(e)=>setDesde(e.target.value)}
-          style={{marginRight:"10px"}}
-        />
+   </table>
 
-        <label>Hasta:</label>
-        <input
-          type="date"
-          onChange={(e)=>setHasta(e.target.value)}
-        />
-
-      </div>
-
-      <table border={1} cellPadding={8} style={{borderCollapse:"collapse"}}>
-
-        <thead style={{background:"#eee"}}>
-
-          <tr>
-            <th>ID</th>
-            <th>Proveedor</th>
-            <th>Fecha</th>
-            <th>Costo</th>
-          </tr>
-
-        </thead>
-
-        <tbody>
-
-          {datosFiltrados.map((c:any)=>(
-            <tr key={c.id_compra}>
-              <td>{c.id_compra}</td>
-              <td>{c.nom_prov}</td>
-              <td>{c.fecha}</td>
-              <td>${Number(c.costo).toLocaleString()}</td>
-            </tr>
-          ))}
-
-        </tbody>
-
-      </table>
-
-    </div>
-  )
+  </div>
+ )
 }

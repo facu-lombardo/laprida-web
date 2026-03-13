@@ -14,6 +14,8 @@ console.log(process.env.DATABASE_URL);
 
 const archivo = "data/compras.csv";
 
+
+
 async function importar() {
 
  const client = await pool.connect();
@@ -28,8 +30,9 @@ async function importar() {
 
    fs.createReadStream(archivo)
     .pipe(iconv.decodeStream("latin1"))
-    .pipe(csv({ separator: ";" }))
+    .pipe(csv({ separator: "," }))
     .on("data", (row) => {
+     console.log("Fila leída:", row);   
 
      try {
 
