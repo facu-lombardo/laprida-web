@@ -13,16 +13,26 @@ export default async function Page() {
 
       <h1>Compras</h1>
 
-      <table border={1} cellPadding={10}>
+      <table border={1} cellPadding={10} style={{ borderCollapse: "collapse" }}>
+        
+        <thead>
+          <tr>
+            <th>Proveedor</th>
+            <th>Costo</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+
         <tbody>
-          {compras.map((c:any) => (
+          {compras.map((c: any) => (
             <tr key={c.id}>
-              <td>{c.proveedor}</td>
-              <td>{c.monto}</td>
-              <td>{c.fecha.toISOString().slice(0,10)}</td>
+              <td>{c.nom_prov}</td>
+              <td>{c.costo}</td>
+              <td>{new Date(c.fecha).toISOString().slice(0,10)}</td>
             </tr>
           ))}
         </tbody>
+
       </table>
 
     </div>
