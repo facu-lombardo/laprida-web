@@ -35,12 +35,19 @@ export default function NuevaCaja() {
     "Cabal débito",
     ];
 
+  const colorTubo = [
+    "Verde",
+    "Azul",
+    ];
 
-// TOTAL TARJETAS
-const totalTarjetas = tarjetas.reduce(
-  (acc, t) => acc + t.monto,
-  0
-);
+
+const totalTarjetas = tarjetas.reduce((acc, t) => acc + t.monto, 0);
+
+const totalCabal = tarjetas
+  .filter(t =>
+    t.medio === "Cabal crédito" || t.medio === "Cabal débito"
+  )
+  .reduce((acc, t) => acc + t.monto, 0);
 
 function formatearFecha(fecha: string) {
   if (!fecha) return "";
@@ -166,6 +173,65 @@ function formatearFecha(fecha: string) {
   <div className="alert alert-success mt-3">
     Total tarjetas: <b>${totalTarjetas.toLocaleString()}</b>
   </div>
+</div>
+{/* TUBOS */}
+<div className="card p-3 mb-4">
+  <h4>Tubos</h4>
+
+  <input
+    type="number"
+    placeholder="Número"
+    onChange={e => setNumero(e.target.value)}
+    className="form-control mb-2"
+  />
+
+  <select
+    value={color}
+    onChange={(e) => setColor(e.target.value)}
+    className="form-control mb-2"
+  >
+    <option value="">Seleccionar color</option>
+    {colorTubo.map((m, i) => (
+      <option key={i} value={m}>
+        {m}
+      </option>
+    ))}
+  </select>
+
+  <input
+    type="number"
+    placeholder="Monto"
+    onChange={e => setMontoTubo(e.target.value)}
+    className="form-control mb-2"
+  />
+
+  <button
+    className="btn btn-success mb-3"
+    onClick={() => {
+      setTubos([
+        ...tubos,
+        {
+          numero: Number(numero),
+          color,
+          monto: Number(montoTubo)
+        }
+      ]);
+
+      setNumero("");
+      setColor("");
+      setMontoTubo("");
+    }}
+  >
+    Agregar tubo
+  </button>
+
+  <ul>
+    {tubos.map((t, i) => (
+      <li key={i}>
+        Tubo {t.numero} ({t.color}) - ${t.monto}
+      </li>
+    ))}
+  </ul>
 </div>
       
 

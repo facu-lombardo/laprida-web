@@ -6,140 +6,93 @@ export default async function Page({
   searchParams,
 }: {
   searchParams: Promise<{
-    proveedor?: string;
-    fecha?: string;
-    desde?: string;
-    hasta?: string;
     semana?: string;
   }>;
 }) {
-  const params = await searchParams; // 👈 CLAVE
-
-  const proveedor = params.proveedor || "";
-  const fecha = params.fecha || "";
-  const desde = params.desde || "";
-  const hasta = params.hasta || "";
+  const params = await searchParams;
   const semana = params.semana || "";
-  // -------------------------------
-  // LISTADO NORMAL
-  // -------------------------------
-  let query = "SELECT * FROM compras WHERE 1=1";
-  const values: any[] = [];
 
-  if (proveedor) {
-    values.push(`%${proveedor}%`);
-    query += ` AND nom_prov ILIKE $${values.length}`;
-  }
-
-  if (fecha) {
-    values.push(fecha);
-    query += ` AND fecha = $${values.length}`;
-  }
-
-  query += " ORDER BY fecha DESC";
-
-  const result = await pool.query(query, values);
-  const compras = result.rows;
-
-  const totalListado = compras.reduce(
-    (acc: number, c: any) => acc + Number(c.costo),
-    0
-  );
-
-  // -------------------------------
-  // RESUMEN SEMANAL
-  // -------------------------------
-  let resumen = null;
   let proveedores: any[] = [];
+  let resumen: any = null;
+  let semanas: any[] = [];
 
-  if (desde && hasta) {
-    // Totales
-    const totalQuery = `
+  // -------------------------------
+  // TRAER SEMANAS DISPONIBLES (PRO)
+  // -------------------------------
+  const semanasResult = await pool.query(`
+    SELECT DISTINCT semana 
+    FROM vista_con_semana
+    WHERE semana IS NOT NULL
+    ORDER BY semana
+  `);
+
+  semanas = semanasResult.rows;
+
+  // -------------------------------
+  // SI HAY SEMANA → TRAER DATOS
+  // -------------------------------
+  if (semana) {
+
+    // 🔹 RESUMEN GENERAL
+    const resumenQuery = `
       SELECT 
         SUM(costo) as total_costo,
+        SUM(publico) as total_publico,
         SUM(uni_fact) as total_unidades
-      FROM compras
-      WHERE fecha BETWEEN $1 AND $2
+      FROM vista_con_semana
+      WHERE semana = $1
     `;
 
-    const totalResult = await pool.query(totalQuery, [desde, hasta]);
-    resumen = totalResult.rows[0];
+    const resumenResult = await pool.query(resumenQuery, [semana]);
+    resumen = resumenResult.rows[0];
 
-    // Agrupado por proveedor
+    // 🔹 AGRUPADO POR PROVEEDOR
     const provQuery = `
       SELECT 
         nom_prov,
         SUM(costo) as total_costo,
+        SUM(publico) as total_publico,
         SUM(uni_fact) as total_unidades
-      FROM compras
-      WHERE fecha BETWEEN $1 AND $2
+      FROM vista_con_semana
+      WHERE semana = $1
       GROUP BY nom_prov
       ORDER BY total_costo DESC
     `;
 
-    const provResult = await pool.query(provQuery, [desde, hasta]);
-    proveedores = provResult.rows;
+    const result = await pool.query(provQuery, [semana]);
+    proveedores = result.rows;
   }
+
+  const ratio = resumen?.total_publico
+    ? resumen.total_costo / resumen.total_publico
+    : 0;
 
   return (
     <div className="container mt-5">
 
-      <h1 className="mb-4">Compras</h1>
+      <h1 className="mb-4">Compras por Semana</h1>
 
-      {/* ---------------- FILTROS NORMALES ---------------- */}
-      <form className="row g-3 mb-3">
+      {/* ---------------- FILTRO SEMANA PRO ---------------- */}
+      <form className="row g-3 mb-4">
 
-        <div className="col-md-3">
-          <input
-            type="text"
-            name="proveedor"
-            defaultValue={proveedor}
-            placeholder="Proveedor"
+        <div className="col-md-4">
+          <select
+            name="semana"
+            defaultValue={semana}
             className="form-control"
-          />
-        </div>
-
-        <div className="col-md-3">
-          <input
-            type="date"
-            name="fecha"
-            defaultValue={fecha}
-            className="form-control"
-          />
+          >
+            <option value="">Seleccionar semana</option>
+            {semanas.map((s: any) => (
+              <option key={s.semana} value={s.semana}>
+                Semana {s.semana}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="col-md-3">
           <button className="btn btn-primary w-100">
-            Filtrar listado
-          </button>
-        </div>
-
-      </form>
-
-      {/* ---------------- FILTRO SEMANA ---------------- */}
-      <form className="row g-3 mb-4">
-
-        <div className="col-md-3">
-          <input
-            type="date"
-            name="desde"
-            defaultValue={desde}
-            className="form-control"
-          />
-        </div>
-
-        <div className="col-md-3">
-          <input
-            type="date"
-            name="hasta"
-            defaultValue={hasta}
-            className="form-control"
-          />
-        </div>
-
-        <div className="col-md-3">
-          <button className="btn btn-success w-100">
-            Ver resumen semanal
+            Filtrar
           </button>
         </div>
 
@@ -147,62 +100,65 @@ export default async function Page({
 
       {/* ---------------- RESUMEN ---------------- */}
       {resumen && (
-        <div className="alert alert-info">
-          <b>Resumen de la semana</b><br />
-          Total costo: ${Number(resumen.total_costo || 0).toLocaleString()} <br />
-          Total unidades: {Number(resumen.total_unidades || 0).toLocaleString()}
+        <div className="row mb-4">
+
+          <div className="col-md-3">
+            <div className="alert alert-primary">
+              <b>Total costo</b><br />
+              ${Number(resumen.total_costo || 0).toLocaleString()}
+            </div>
+          </div>
+
+          <div className="col-md-3">
+            <div className="alert alert-success">
+              <b>Total público</b><br />
+              ${Number(resumen.total_publico || 0).toLocaleString()}
+            </div>
+          </div>
+
+          <div className="col-md-3">
+            <div className="alert alert-warning">
+              <b>Costo / Público</b><br />
+              {(ratio * 100).toFixed(2)}%
+            </div>
+          </div>
+
+          <div className="col-md-3">
+            <div className="alert alert-info">
+              <b>Unidades</b><br />
+              {Number(resumen.total_unidades || 0).toLocaleString()}
+            </div>
+          </div>
+
         </div>
       )}
 
-      {/* ---------------- PROVEEDORES ---------------- */}
+      {/* ---------------- TABLA PROVEEDORES ---------------- */}
       {proveedores.length > 0 && (
-        <table className="table table-bordered mb-5">
+        <table className="table table-bordered">
+
           <thead className="table-dark">
             <tr>
               <th>Proveedor</th>
               <th>Total costo</th>
+              <th>Total público</th>
               <th>Unidades</th>
             </tr>
           </thead>
+
           <tbody>
             {proveedores.map((p: any) => (
               <tr key={p.nom_prov}>
                 <td>{p.nom_prov}</td>
                 <td>${Number(p.total_costo).toLocaleString()}</td>
+                <td>${Number(p.total_publico).toLocaleString()}</td>
                 <td>{Number(p.total_unidades)}</td>
               </tr>
             ))}
           </tbody>
+
         </table>
       )}
-
-      {/* ---------------- TOTAL LISTADO ---------------- */}
-      <div className="alert alert-success">
-        Total listado: <b>${totalListado.toLocaleString()}</b>
-      </div>
-
-      {/* ---------------- TABLA ORIGINAL ---------------- */}
-      <table className="table table-striped table-hover">
-
-        <thead className="table-dark">
-          <tr>
-            <th>Proveedor</th>
-            <th>Costo</th>
-            <th>Fecha</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {compras.map((c: any) => (
-            <tr key={c.id}>
-              <td>{c.nom_prov}</td>
-              <td>${Number(c.costo).toLocaleString()}</td>
-              <td>{new Date(c.fecha).toLocaleDateString("es-AR")}</td>
-            </tr>
-          ))}
-        </tbody>
-
-      </table>
 
     </div>
   );
