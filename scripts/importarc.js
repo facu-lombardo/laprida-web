@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { DBFFile } from "dbffile";
+import { Pool } from "pg";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,141 +11,276 @@ dotenv.config({
   path: path.resolve(__dirname, "../.env.local")
 });
 
+// =====================================
+// SUPABASE / POSTGRES
+// =====================================
 
-import fs from "fs";
-import csv from "csv-parser";
-import iconv from "iconv-lite";
-import { Pool } from "pg";
-
-console.log("ENV PATH:", process.cwd());
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  
 });
 
-const archivo = "../data/compras.csv";
+// =====================================
+// ARCHIVO DBF
+// =====================================
 
-// 📅 convierte 2/1/2026 → 2026-01-02
-function parseFecha(fecha) {
-  if (!fecha) return null;
+const archivo = "P:/sfc/PROVEMOV.DBF";
 
-  const partes = fecha.split("/");
-  if (partes.length !== 3) return null;
+// =====================================
+// HELPERS
+// =====================================
 
-  const [d, m, y] = partes;
-  return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+async function obtenerUltimoId(client) {
+
+  const result = await client.query(`
+    SELECT COALESCE(MAX(id_compra), 0) AS ultimo
+    FROM provemov
+  `);
+
+  return result.rows[0].ultimo;
 }
 
-// 🔢 convierte "12345,67" → 12345.67
 function parseNumero(valor) {
-  if (!valor) return 0;
-  return parseFloat(valor.replace(",", ".")) || 0;
+
+  if (valor === null || valor === undefined || valor === "") {
+    return 0;
+  }
+
+  return Number(valor) || 0;
 }
+function parseFecha(valor) {
+
+  if (!valor) {
+    return null;
+  }
+
+  const fecha = new Date(valor);
+
+  // fecha inválida
+  if (isNaN(fecha.getTime())) {
+    return null;
+  }
+
+  return fecha.toISOString().split("T")[0];
+}
+
+function limpiarTexto(valor) {
+
+  if (valor === null || valor === undefined) {
+    return null;
+  }
+
+  return String(valor)
+    .replace(/\u0000/g, "") // elimina bytes nulos
+    .trim();
+}
+
+// =====================================
+// IMPORTACION
+// =====================================
 
 async function importar() {
+
   const client = await pool.connect();
 
   try {
-    
+
     console.log("🚀 Iniciando importación...");
+
+    // abrir DBF
+    const dbf = await DBFFile.open(archivo, {
+      encoding: "latin1"
+    });
+
+    console.log(`📦 Registros encontrados: ${dbf.recordCount}`);
+
+    const registros = await dbf.readRecords();
 
     const batch = [];
     const batchSize = 500;
 
+    let insertados = 0;
+    let ignorados = 0;
+
     await client.query("BEGIN");
+    
+    const ultimoId = await obtenerUltimoId(client);
 
-    await new Promise((resolve, reject) => {
-      fs.createReadStream(archivo)
-        .pipe(iconv.decodeStream("latin1"))
-        .pipe(csv({
-          separator: ";",
-          mapHeaders: ({ header }) =>
-            header
-              .replace(/^\uFEFF/, "") // BOM real
-              .replace(/^ï»¿/, "")   // BOM roto
-              .trim()
-        }))
-        .on("data", async (row) => {
+    console.log(`📌 Último ID importado: ${ultimoId}`);
 
-          const registro = [
-            parseInt(row.ID_COMPRA) || null,
-            parseInt(row.COD_PROV) || null,
-            row.NOM_PROV || null,
-            row.CUIT || null,
-            row.NUMERO || null,
-            row.TIPO || null,
-            parseFecha(row.FECHA),
-            parseFecha(row.FEC_MOV),
-            parseNumero(row.COSTO),
-            parseNumero(row.PUBLICO),
-            parseInt(row.UNI_FACT) || 0,
-            parseInt(row.UNI_ING) || 0,
-            parseNumero(row.EXENTO),
-            parseNumero(row.GRAVADO),
-            parseNumero(row.IVA),
-            parseNumero(row.PER_IBR_VS),
-            parseNumero(row.PER_IVA),
-            parseNumero(row.PER_GAN)
-          ];
+    for (const row of registros) {
 
-          batch.push(registro);
+      // =====================================
+      // FILTRO SOLO LOS QUE ESTAN LUEGO DEL ULTMO ID IMPORTADO
+      // =====================================
 
-          // 🚀 insertar por bloques
-          if (batch.length === batchSize) {
-            await insertarBatch(client, batch);
-            console.log(`✔ Insertadas ${batch.length} filas`);
-            batch.length = 0;
-          }
-        })
-        .on("end", async () => {
-          if (batch.length > 0) {
-            await insertarBatch(client, batch);
-            console.log(`✔ Insertadas últimas ${batch.length}`);
-          }
-          resolve();
-        })
-        .on("error", reject);
-    });
+    if (!row.ID_COMPRA) {
+      ignorados++;
+      continue;
+    }
+
+    if (row.ID_COMPRA <= ultimoId) {
+      ignorados++;
+      continue;
+    }
+
+      // =====================================
+      // ARMAR REGISTRO
+      // =====================================
+
+    const registro = [
+
+      row.ID_COMPRA || null,
+
+      limpiarTexto(row.CODIGO),
+
+      parseFecha(row.FECHA),
+
+      limpiarTexto(row.TIPO),
+
+      limpiarTexto(row.NUMERO),
+
+      parseNumero(row.UNIDADES),
+      parseNumero(row.IMPORTE),
+
+      parseNumero(row.UNID_ING),
+      parseNumero(row.IMP_ING_PP),
+
+      parseFecha(row.FEC_REAL),
+
+      parseNumero(row.EXENTO),
+      parseNumero(row.GRAVADO),
+
+      parseNumero(row.IVA),
+      parseNumero(row.IVA2),
+
+      parseNumero(row.IB),
+      parseNumero(row.IBP),
+
+      parseNumero(row.IB1),
+      parseNumero(row.IB2),
+
+    false
+    ];
+      batch.push(registro);
+
+      // =====================================
+      // INSERT MASIVO
+      // =====================================
+
+      if (batch.length >= batchSize) {
+
+        const cantidad = await insertarBatch(client, batch);
+
+        insertados += cantidad;
+
+        console.log(`✔ Insertadas ${cantidad}`);
+
+        batch.length = 0;
+      }
+    }
+
+    // =====================================
+    // ULTIMO BATCH
+    // =====================================
+
+    if (batch.length > 0) {
+
+      const cantidad = await insertarBatch(client, batch);
+
+      insertados += cantidad;
+
+      console.log(`✔ Últimas ${cantidad}`);
+    }
 
     await client.query("COMMIT");
 
-    console.log("✅ Importación completa");
+    console.log("=================================");
+    console.log("✅ IMPORTACION FINALIZADA");
+    console.log(`📥 Insertados: ${insertados}`);
+    console.log(`⏭ Ignorados: ${ignorados}`);
+    console.log("=================================");
 
   } catch (error) {
+
     await client.query("ROLLBACK");
-    console.error("❌ Error:", error);
+
+    console.error("❌ Error en importación:");
+    console.error(error);
+
   } finally {
+
     client.release();
     process.exit();
   }
 }
 
-// 🔥 INSERT MASIVO
+// =====================================
+// INSERT BATCH
+// =====================================
+
 async function insertarBatch(client, batch) {
+
   const valores = [];
 
   const placeholders = batch
     .map((fila, i) => {
+
       const base = i * fila.length;
+
       const params = fila.map((_, j) => `$${base + j + 1}`);
+
       valores.push(...fila);
+
       return `(${params.join(",")})`;
+
     })
     .join(",");
 
   const query = `
-    INSERT INTO compras (
-      id_compra, cod_prov, nom_prov, cuit, numero, tipo,
-      fecha, fec_mov, costo, publico,
-      uni_fact, uni_ing,
-      exento, gravado, iva,
-      per_ibr_vs, per_iva, per_gan
+    INSERT INTO provemov (
+
+      id_compra,
+      codigo,
+
+      fecha,
+      tipo,
+      numero,
+
+      unidades,
+      importe,
+
+      unid_ing,
+      imp_ing_pp,
+
+      fec_real,
+
+      exento,
+      gravado,
+
+      iva,
+      iva2,
+
+      ib,
+      ibp,
+      ib1,
+      ib2,
+
+      cancelada
+
     )
     VALUES ${placeholders}
+
+    ON CONFLICT (id_compra)
+    DO NOTHING
   `;
 
-  await client.query(query, valores);
+  const result = await client.query(query, valores);
+
+  return result.rowCount || 0;
 }
+
+// =====================================
+// EJECUTAR
+// =====================================
 
 importar();
