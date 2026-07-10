@@ -4,7 +4,7 @@ import MainLayout from "@/components/layout/MainLayout";
 
 import "./globals.css";
 
-import MainLayout from "@/components/layout/MainLayout";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
