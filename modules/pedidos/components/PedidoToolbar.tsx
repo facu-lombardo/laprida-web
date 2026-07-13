@@ -11,12 +11,11 @@ export default function PedidoToolbar() {
         className="max-w-sm"
       />
 
-      <Button asChild>
-        <Link href="/pedidos/nuevo">
+      < Link href="/pedidos/nuevo">
+        <Button>
           Nuevo Pedido
-        </Link>
-      </Button>
-
+        </Button>
+      </Link>
     </div>
   );
 }
