@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import MainLayout from "@/components/layout/MainLayout";
 
 import "./globals.css";
 
 
+import AppProvider from "@/components/providers/AppProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,22 +18,24 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Farmacia Laprida",
-  description: "Sistema de Gestión de Pedidos",
+  description: "Sistema de gestión de pedidos",
 };
+
+interface RootLayoutProps {
+  children: React.ReactNode;
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<RootLayoutProps>) {
   return (
     <html lang="es">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <MainLayout>
+        <AppProvider>
           {children}
-        </MainLayout>
+        </AppProvider>
       </body>
     </html>
   );

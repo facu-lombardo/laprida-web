@@ -1,11 +1,12 @@
-import { Pedido } from "@/types/pedido";
+import { Pedido } from "@/modules/pedidos/types/pedido";
 import PedidoRow from "./PedidoRow";
 
 const pedidos: Pedido[] = [
   {
     id: "1",
     numero_pedido: 1052,
-    cliente: "Juan Pérez",
+    nombre: "Juan",
+    apellido: "Pérez",
     obra_social: "PAMI",
     cantidad_recetas: 2,
     cantidad_productos: 4,
@@ -17,7 +18,8 @@ const pedidos: Pedido[] = [
   {
     id: "2",
     numero_pedido: 1053,
-    cliente: "Ana Gómez",
+    nombre: "Ana",
+    apellido: "Gómez",
     obra_social: "IOMA",
     cantidad_recetas: 1,
     cantidad_productos: 3,

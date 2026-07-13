@@ -1,4 +1,4 @@
-import { Pedido } from "@/types/pedido";
+import { Pedido } from "@/modules/pedidos/types/pedido";
 import EstadoBadge from "./EstadoBadge";
 
 interface Props {
@@ -11,7 +11,7 @@ export default function PedidoRow({ pedido }: Props) {
 
       <td className="p-3">{pedido.numero_pedido}</td>
 
-      <td>{pedido.cliente}</td>
+      <td>{pedido.nombre} {pedido.apellido}</td>
 
       <td>{pedido.obra_social}</td>
 

@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { EstadoPedido } from "@/types/pedido";
+import { EstadoPedido } from "@/modules/pedidos/types/pedido";
 
 interface Props {
   estado: EstadoPedido;
