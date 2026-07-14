@@ -6,7 +6,7 @@ import { EstadoPedido, NuevoPedido } from "@/modules/pedidos/types/pedido";
 export const ESTADOS_PEDIDO: EstadoPedido[] = [
   "PENDIENTE",
   "EN_PREPARACION",
-  "LISTO",
+  "PREPARADO",
   "ENTREGADO",
   "CANCELADO",
 ];
@@ -17,7 +17,7 @@ export const ESTADOS_PEDIDO: EstadoPedido[] = [
 export const ESTADO_LABELS: Record<EstadoPedido, string> = {
   PENDIENTE: "Pendiente",
   EN_PREPARACION: "En preparación",
-  LISTO: "Listo",
+  PREPARADO: "Preparado",
   ENTREGADO: "Entregado",
   CANCELADO: "Cancelado",
 };
@@ -29,7 +29,7 @@ export const ESTADO_LABELS: Record<EstadoPedido, string> = {
 export const ESTADO_COLORS: Record<EstadoPedido, string> = {
   PENDIENTE: "bg-yellow-500",
   EN_PREPARACION: "bg-blue-500",
-  LISTO: "bg-green-600",
+  PREPARADO: "bg-green-600",
   ENTREGADO: "bg-gray-500",
   CANCELADO: "bg-red-600",
 };
